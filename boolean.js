@@ -1,3 +1,9 @@
-console.log('A');
 
-console.log('B');
+let string = "Hello";
+
+let newArray = string.split('');
+
+console.log(newArray);
+
+
+
