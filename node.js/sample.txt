@@ -1,6 +1,0 @@
-<p>Lorem, ipsum dolor sit amet consectetur adipisicing elit. Sapiente placeat, unde, veniam in nesciunt quaerat d
-eleniti quisquam, nisi dolor enim ducimus quibusdam explicabo vero suscipit dolorum eveniet consectetur dignissimos similique.</p>
-
-
-유국현 프론트 개발자 되기 프로젝트 지금은 움추려서 내것만 공부하자 
-노력하면 모든일이 잘풀릴꺼야!!!

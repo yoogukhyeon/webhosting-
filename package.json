@@ -1,10 +1,10 @@
 {
-  "name": "Day1",
+  "name": "AJAX",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon sync.js"
+    "start": "nodemon main.js"
   },
   "keywords": [],
   "author": "",
@@ -12,7 +12,10 @@
   "dependencies": {
     "ejs": "^3.1.6",
     "express": "^4.17.1",
-    "install": "^0.13.0"
+    "install": "^0.13.0",
+    "morgan": "^1.10.0",
+    "mysql": "^2.18.1",
+    "querystring": "^0.2.1"
   },
   "repository": {
     "type": "git",
