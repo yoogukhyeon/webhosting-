@@ -1,45 +1,14 @@
-var http = require('http');
-var fs = require('fs');
-var url = require('url');
-var qs = require('querystring');
-const { request } = require('express');
+const http = require('http');
+const fs = require('fs');
+const url = require('url');
+const qs = require('querystring');
+const {
+    request
+} = require('express');
 
-function templateHTML(title, list, body) {
-    return `<!doctype html>
-    <html>
-  <head>
-   <title>WEB1 - ${title}</title>
-   <meta charset="utf-8">
- </head>
- <body>
-   <h1><a href="/">WEB</a></h1>
-    ${list}
-    <a href="./create">Create</a>
-    ${body}
-   </p>
- </body>
- </html>
- `;
-};
-
-
-
-function templateList(filelist) {
-    var list = '<ul>'
-
-    var i = 0;
-
-    while (i < filelist.length) {
-        list = list + `<li><a href="/?id=${filelist[i]}">${filelist[i]}</a></li>`
-        i = i + 1;
-
-    }
-
-    list = list + '</ul>';
-
-    return list;
-}
-
+const template = require('./lib/template')
+const path = require('path');
+const sanitizeHtml = require('sanitize-html');
 
 
 var app = http.createServer(function (req, res) {
@@ -56,39 +25,65 @@ var app = http.createServer(function (req, res) {
             fs.readdir('./data', (err, filelist) => {
                 var title = "welcome";
                 var description = "블로그 연습을 위해서 node.js 기반으로 작업을 합니다";
-                var list = templateList(filelist);
+                
+                var list = template.list(filelist);
 
-                var template = templateHTML(title, list, `<h2>${title}</h2>${description}`);
+                var Html = template.html(title, list, `<h2>${title}</h2>${description}`,
+                    `<a href="./create">Create</a>`
+                );
                 res.writeHead(200);
-                res.end(template);
+                res.end(Html);
+
+                // var list = templateList(filelist);
+
+                // var template = templateHTML(title, list, `<h2>${title}</h2>${description}`,
+                //     `<a href="./create">Create</a>`
+                // );
+                // res.writeHead(200);
+                // res.end(template);
+
+
             })
 
 
 
         } else {
             fs.readdir('./data', (err, filelist) => {
-                fs.readFile(`data/${queryData.id}`, 'utf8', (err, description) => {
-                    var list = templateList(filelist);
-                    var template = templateHTML(title, list, `<h2>${title}</h2>${description}`);
+                const filteredId = path.parse(queryData.id).base;
+        
+                fs.readFile(`data/${filteredId}`, 'utf8', (err, description) => {
+                    var list = template.list(filelist);
+                    var sanitizedTitle = sanitizeHtml(title);
+                    var sanitizedDesc = sanitizeHtml(description , {
+                        allowedTags: ['h1']
+                    });
+                    var Html = template.html(title, list, `<h2>${sanitizedTitle}</h2>${sanitizedDesc}`,
+                        `<a href="./create">Create</a> 
+                        <a href="/update?id=${sanitizedTitle}">updata</a> 
+                        <form action="delete_process" method="post"> 
+                            <input type="hidden" name="id" value="${sanitizedTitle}">
+                            <input type="submit" value="delete">
+                        </form>
+                        `);
                     res.writeHead(200);
-                    res.end(template);
+                    res.end(Html);
                 });
-     
-     
+
+
             });
-     
+
         }
-    
-    
-    
-    
-    }else if(pathname === '/create'){
+
+
+
+
+    } else if (pathname === '/create') {
 
         fs.readdir('./data', (err, filelist) => {
             var title = "WEB -  CREATE";
-            var list = templateList(filelist);
+            var list = template.list(filelist);
 
-            var template = templateHTML(title, list, `
+            var Html = template.html(title, list, `
                  <form action="/process_create" method="post">
                             <p><input type="text" name="title" placeholder="title"></p>
                             <p><textarea name="description" id="" cols="30" rows="20" placeholder="description"></textarea></p>
@@ -96,31 +91,147 @@ var app = http.createServer(function (req, res) {
                  </form>
             
             
-            `);
+            `, " ");
             res.writeHead(200);
-            res.end(template);
+            res.end(Html);
         })
 
 
 
 
-    } else if(pathname === '/process_create'){
+    } else if (pathname === '/process_create') {
         var body = "";
 
-        req.on('data' , function(data){
+        req.on('data', function (data) {
             body = body + data;
         })
 
-        req.on('end' , function(){
+        req.on('end', function () {
             var post = qs.parse(body);
             var title = post.title;
             var description = post.description;
-            console.log(title)
+
+
+            fs.writeFile(`data/${title}`, description, 'utf8', (err, data) => {
+                if (err) {
+                    console.log(err)
+                } else {
+                    res.writeHead(302, {
+                        Location: `/?id=${title}`
+                    });
+                    res.end()
+                }
+            });
+
         })
 
 
-        res.writeHead(200);
-        res.end('success')
+
+
+    } else if (pathname === '/update') {
+
+
+        fs.readdir('./data', (err, filelist) => {
+            const filteredId = path.parse(queryData.id).base;
+            fs.readFile(`data/${filteredId}`, 'utf8', (err, description) => {
+                var list = template.list(filelist);
+                var Html = template.html(title, list, `
+
+
+                <form action="/update_process" method="post">
+                    <input type="hidden" name="id" value="${title}">
+                    <p><input type="text" name="title" placeholder="title" value="${title}"></p>
+                    <p><textarea name="description" id="" cols="30" rows="20" placeholder="description">${description}</textarea></p>
+                    <p><input type="submit"></p>
+                </form>
+                
+                
+                
+                `,
+                    `<a href="/update?id=${title}">updata</a>`);
+                res.writeHead(200);
+                res.end(Html);
+            });
+
+
+        });
+
+
+
+
+
+
+    }else if(pathname === "/update_process"){
+
+        var body = "";
+
+        req.on('data', function (data) {
+            body = body + data;
+        })
+
+        req.on('end', function () {
+            var post = qs.parse(body);
+            var id = post.id;
+            var title = post.title;
+            var description = post.description;
+            var filteredId = path.parse(id).base;
+            fs.rename(`data/${filteredId}`, `data/${title}`, (err, data) => {
+                fs.writeFile(`data/${title}`, description, 'utf8', (err, data) => {
+                    if (err) {
+                        console.log(err)
+                    } else {
+                        res.writeHead(302, {
+                            Location: `/?id=${title}`
+                        });
+                        res.end()
+                    }
+                });
+
+
+            })
+      
+     
+
+           
+
+        })
+
+
+
+
+
+    } else if(pathname === "/delete_process") {
+        var body = "";
+
+        req.on('data', function (data) {
+            body = body + data;
+        })
+
+        req.on('end', function () {
+            var post = qs.parse(body);
+            var id = post.id;
+            var filteredId = path.parse(id).base;
+            fs.unlink(`data/${filteredId}`, (err , date) => {
+                if(err){
+                    console.log(err)
+                }else{
+                    res.writeHead(302, {
+                        Location: `/`
+                    });
+                    res.end()
+                }
+                 
+              
+             
+              });
+            
+     
+
+           
+
+        })
+
+            
 
     } else {
         res.writeHead(404);
